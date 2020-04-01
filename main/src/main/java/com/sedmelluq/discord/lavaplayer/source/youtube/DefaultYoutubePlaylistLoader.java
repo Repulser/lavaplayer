@@ -10,6 +10,7 @@ import com.sedmelluq.discord.lavaplayer.track.AudioTrackInfo;
 import com.sedmelluq.discord.lavaplayer.track.BasicAudioPlaylist;
 import java.io.IOException;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
 import java.util.function.Function;
 import org.apache.http.client.methods.CloseableHttpResponse;
@@ -145,7 +146,8 @@ public class DefaultYoutubePlaylistLoader implements YoutubePlaylistLoader {
         long duration = Long.parseLong(item.get("lengthSeconds").text()) * 1000;
 
         AudioTrackInfo info = new AudioTrackInfo(title, author, duration, videoId, false,
-            "https://www.youtube.com/watch?v=" + videoId);
+            "https://www.youtube.com/watch?v=" + videoId,
+            Collections.singletonMap("artworkUrl", String.format("https://img.youtube.com/vi/%s/0.jpg", videoId)));
 
         tracks.add(trackFactory.apply(info));
       }
