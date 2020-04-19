@@ -70,19 +70,20 @@ public class YoutubeIpRotatorSetup {
     return this;
   }
 
-  public void setup() {
-    apply(mainConfiguration, new YoutubeIpRotatorFilter(mainDelegate, false, routePlanner, retryLimit));
-    apply(searchConfiguration, new YoutubeIpRotatorFilter(searchDelegate, true, routePlanner, retryLimit));
+  public void setup(boolean applyPlanner) {
+    apply(mainConfiguration, new YoutubeIpRotatorFilter(mainDelegate, false, routePlanner, retryLimit), applyPlanner);
+    apply(searchConfiguration, new YoutubeIpRotatorFilter(searchDelegate, true, routePlanner, retryLimit), applyPlanner);
   }
 
-  protected void apply(List<ExtendedHttpConfigurable> configurables, YoutubeIpRotatorFilter filter) {
+  protected void apply(List<ExtendedHttpConfigurable> configurables, YoutubeIpRotatorFilter filter, boolean applyPlanner) {
     for (ExtendedHttpConfigurable configurable : configurables) {
       configurable.configureBuilder(builder ->
           ((ExtendedHttpClientBuilder) builder).setConnectionManagerFactory(SimpleHttpClientConnectionManager::new)
       );
 
       configurable.configureBuilder(it -> {
-        it.setRoutePlanner(routePlanner);
+        if(applyPlanner)
+          it.setRoutePlanner(routePlanner);
         // No retry for some exceptions we know are hopeless for retry.
         it.setRetryHandler(RETRY_HANDLER);
         // Regularly cleans up per-route connection pool which gets huge due to many routes caused by
