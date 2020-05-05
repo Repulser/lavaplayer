@@ -195,11 +195,15 @@ public class DefaultYoutubeTrackDetails implements YoutubeTrackDetails {
             continue;
           }
 
+          String url = cipherInfo.getOrDefault("url", formatJson.get("url").text());
+
+          if(url == null) continue;
+
           tracks.add(new YoutubeTrackFormat(
               ContentType.parse(formatJson.get("mimeType").text()),
               formatJson.get("bitrate").asLong(Units.BITRATE_UNKNOWN),
               contentLength,
-              cipherInfo.getOrDefault("url", formatJson.get("url").text()),
+              url,
               cipherInfo.get("s"),
               cipherInfo.getOrDefault("sp", DEFAULT_SIGNATURE_KEY)
           ));
@@ -265,7 +269,7 @@ public class DefaultYoutubeTrackDetails implements YoutubeTrackDetails {
           log.debug("Skipping format {} because the content length is missing", contentType);
           continue;
         }
-
+        
         tracks.add(new YoutubeTrackFormat(
             ContentType.parse(contentType),
             Long.parseLong(representation.attr("bandwidth")),
