@@ -117,11 +117,15 @@ public class DefaultYoutubeTrackDetails implements YoutubeTrackDetails {
     for (String formatString : adaptiveFormats.split(",")) {
       Map<String, String> format = decodeUrlEncodedItems(formatString, false);
 
+      String url = format.get("url");
+
+      if(url == null) continue;
+
       tracks.add(new YoutubeTrackFormat(
           ContentType.parse(format.get("type")),
           Long.parseLong(format.get("bitrate")),
           Long.parseLong(format.get("clen")),
-          format.get("url"),
+          url,
           format.get("s"),
           format.getOrDefault("sp", DEFAULT_SIGNATURE_KEY)
       ));
