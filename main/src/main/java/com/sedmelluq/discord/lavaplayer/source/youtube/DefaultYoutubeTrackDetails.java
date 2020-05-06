@@ -269,7 +269,7 @@ public class DefaultYoutubeTrackDetails implements YoutubeTrackDetails {
           log.debug("Skipping format {} because the content length is missing", contentType);
           continue;
         }
-        
+
         tracks.add(new YoutubeTrackFormat(
             ContentType.parse(contentType),
             Long.parseLong(representation.attr("bandwidth")),
