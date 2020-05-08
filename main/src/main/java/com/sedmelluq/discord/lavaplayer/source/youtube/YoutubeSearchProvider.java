@@ -111,7 +111,7 @@ public class YoutubeSearchProvider implements YoutubeSearchResultLoader {
 
     AudioTrackInfo info = new AudioTrackInfo(title, author, duration, videoId, false,
         "https://www.youtube.com/watch?v=" + videoId,
-        Collections.singletonMap("artworkUrl", String.format("https://img.youtube.com/vi/%s/0.jpg", videoId)));
+        Collections.singletonMap("artworkUrl", String.format("https://i.ytimg.com/vi/%s/maxresdefault.jpg", videoId)));
 
     tracks.add(trackFactory.apply(info));
   }
