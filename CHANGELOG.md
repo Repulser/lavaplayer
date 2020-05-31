@@ -1,5 +1,14 @@
 # Change Log
 
+## [1.3.49] -- 2020-05-21
+### Fixed
+- Fixed Twitch streaming breaking due to API change (PR 480 by Devoxin).
+- Fixed YT private videos providing invalid result instead of failing (PR 479 by Devoxin).
+
+## [1.3.48] -- 2020-05-12
+### Fixed
+- Fixed some YouTube tracks not working because of cipher detection issues (PR 475 by Devoxin).
+
 ## [1.3.47] -- 2020-04-13
 ### Fixed
 - Fixed loading YouTube live streams within playlists (PR 294 by Devoxin).
