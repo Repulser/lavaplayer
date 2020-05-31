@@ -304,7 +304,7 @@ public class DefaultYoutubeTrackDetails implements YoutubeTrackDetails {
 
       boolean isStream = "1".equals(args.get("live_playback").text());
       long duration = extractDurationSeconds(isStream, args, "length_seconds");
-      return buildTrackInfo(videoId, args.get("title").text(), args.get("author").text(), isStream, duration);
+      return buildTrackInfo(videoId, args.get("title").text(), args.get("author").text(), isStream, duration, null);
     }
 
     JsonBrowser playerResponse = JsonBrowser.parse(args.get("player_response").text());
@@ -319,7 +319,10 @@ public class DefaultYoutubeTrackDetails implements YoutubeTrackDetails {
     boolean isStream = videoDetails.get("isLiveContent").asBoolean(false);
     long duration = extractDurationSeconds(isStream, videoDetails, "lengthSeconds");
 
-    return buildTrackInfo(videoId, videoDetails.get("title").text(), videoDetails.get("author").text(), isStream, duration);
+    List<JsonBrowser> thumbnails = videoDetails.get("thumbnail").get("thumbnails").values();
+    final String thumbnail = thumbnails.get(thumbnails.size() - 1).get("url").text();
+
+    return buildTrackInfo(videoId, videoDetails.get("title").text(), videoDetails.get("author").text(), isStream, duration, thumbnail);
   }
 
   private long extractDurationSeconds(boolean isStream, JsonBrowser object, String field) {
@@ -330,10 +333,10 @@ public class DefaultYoutubeTrackDetails implements YoutubeTrackDetails {
     return Units.secondsToMillis(object.get(field).asLong(DURATION_SEC_UNKNOWN));
   }
 
-  private AudioTrackInfo buildTrackInfo(String videoId, String title, String uploader, boolean isStream, long duration) {
+  private AudioTrackInfo buildTrackInfo(String videoId, String title, String uploader, boolean isStream, long duration, String thumbnail) {
     return new AudioTrackInfo(title, uploader, duration, videoId, isStream,
         "https://www.youtube.com/watch?v=" + videoId,
-        Collections.singletonMap("artworkUrl", String.format("https://i.ytimg.com/vi/%s/maxresdefault.jpg", videoId)));
+        Collections.singletonMap("artworkUrl", thumbnail != null ? thumbnail : String.format("https://i.ytimg.com/vi/%s/maxresdefault.jpg", videoId)));
   }
 
   private static Map<String, String> decodeUrlEncodedItems(String input, boolean escapedSeparator) {
