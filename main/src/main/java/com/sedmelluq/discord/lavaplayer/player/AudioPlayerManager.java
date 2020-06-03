@@ -95,7 +95,7 @@ public interface AudioPlayerManager {
    * @return Holder containing the track if it was successfully decoded.
    * @throws IOException On IO error.
    */
-  DecodedTrackHolder decodeTrack(MessageInput stream) throws IOException;
+  DecodedTrackHolder decodeTrack(MessageInput stream, boolean setPosition) throws IOException;
 
   /**
    * @return Audio processing configuration used for tracks executed by this manager.
