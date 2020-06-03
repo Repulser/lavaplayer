@@ -260,7 +260,7 @@ public class DefaultAudioPlayerManager implements AudioPlayerManager {
   }
 
   @Override
-  public DecodedTrackHolder decodeTrack(MessageInput stream, boolean setPosition) throws IOException {
+  public DecodedTrackHolder decodeTrack(MessageInput stream) throws IOException {
     DataInput input = stream.nextMessage();
     if (input == null) {
       return null;
@@ -273,7 +273,7 @@ public class DefaultAudioPlayerManager implements AudioPlayerManager {
     AudioTrack track = decodeTrackDetails(trackInfo, input);
     long position = input.readLong();
 
-    if (track != null && setPosition) {
+    if (track != null) {
       track.setPosition(position);
     }
 
