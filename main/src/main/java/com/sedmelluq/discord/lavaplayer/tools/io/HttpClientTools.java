@@ -20,6 +20,7 @@ import org.apache.http.impl.client.BasicCookieStore;
 import org.apache.http.impl.client.DefaultHttpRequestRetryHandler;
 import org.apache.http.impl.client.HttpClientBuilder;
 import org.apache.http.protocol.HttpContext;
+import org.apache.http.util.EntityUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -220,7 +221,7 @@ public class HttpClientTools {
         return null;
       } else if (!isSuccessWithContent(statusCode)) {
         throw new FriendlyException("Server responded with an error.", SUSPICIOUS,
-            new IllegalStateException("Response code from channel info is " + statusCode));
+            new IllegalStateException("Response code from channel info is " + statusCode + " body:" + EntityUtils.toString(response.getEntity())));
       }
 
       return JsonBrowser.parse(response.getEntity().getContent());
