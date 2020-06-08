@@ -1,2 +1,2 @@
 install:
-  - ./gradlew clean :main:build
+  - ./gradlew clean build
