@@ -73,7 +73,20 @@ public class TwitchStreamAudioSourceManager implements AudioSourceManager, HttpC
       return null;
     }
 
-    JsonBrowser channelInfo = fetchStreamChannelInfo(streamName);
+    JsonBrowser accessToken = fetchAccessToken(streamName);
+
+    if (accessToken == null || accessToken.get("token").isNull()) {
+      return AudioReference.NO_TRACK;
+    }
+
+    String channelId;
+    try {
+      channelId = JsonBrowser.parse(accessToken.get("token").text()).get("channel_id").text();
+    } catch (IOException e) {
+      return null;
+    }
+
+    JsonBrowser channelInfo = fetchStreamChannelInfo(channelId);
 
     if (channelInfo == null || channelInfo.get("stream").isNull()) {
       return AudioReference.NO_TRACK;
@@ -173,14 +186,24 @@ public class TwitchStreamAudioSourceManager implements AudioSourceManager, HttpC
   }
 
   private static HttpUriRequest addClientHeaders(HttpUriRequest request, String clientId) {
+    request.setHeader("Accept", "application/vnd.twitchtv.v5+json; charset=UTF-8");
     request.setHeader("Client-ID", clientId);
     return request;
   }
 
-  private JsonBrowser fetchStreamChannelInfo(String name) {
+  private JsonBrowser fetchAccessToken(String name) {
+    try (HttpInterface httpInterface = getHttpInterface()) {
+      HttpUriRequest request = createGetRequest("https://api.twitch.tv/api/channels/" + name + "/access_token");
+      return HttpClientTools.fetchResponseAsJson(httpInterface, request);
+    } catch (IOException e) {
+      throw new FriendlyException("Loading Twitch channel access token failed.", SUSPICIOUS, e);
+    }
+  }
+
+  private JsonBrowser fetchStreamChannelInfo(String channelId) {
     try (HttpInterface httpInterface = getHttpInterface()) {
       // helix/streams?user_login=name
-      HttpUriRequest request = createGetRequest("https://api.twitch.tv/kraken/streams/" + name + "?stream_type=all");
+      HttpUriRequest request = createGetRequest("https://api.twitch.tv/kraken/streams/" + channelId + "?stream_type=all");
 
       return HttpClientTools.fetchResponseAsJson(httpInterface, request);
     } catch (IOException e) {
