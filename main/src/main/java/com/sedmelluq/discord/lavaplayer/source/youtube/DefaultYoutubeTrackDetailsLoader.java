@@ -45,13 +45,16 @@ public class DefaultYoutubeTrackDetailsLoader implements YoutubeTrackDetailsLoad
         JsonBrowser json = JsonBrowser.parse(responseText);
         JsonBrowser playerInfo = JsonBrowser.NULL_BROWSER;
         JsonBrowser statusBlock = JsonBrowser.NULL_BROWSER;
+        boolean playerInfoIsResponse = false;
 
         for (JsonBrowser child : json.values()) {
           if (child.isMap()) {
             if (!child.get("player").isNull()) {
               playerInfo = child.get("player");
             } else if (!child.get("playerResponse").isNull()) {
-              statusBlock = child.get("playerResponse").get("playabilityStatus");
+              playerInfo = child.get("playerResponse");
+              statusBlock = playerInfo.get("playabilityStatus");
+              playerInfoIsResponse = true;
             }
           }
         }
@@ -62,14 +65,14 @@ public class DefaultYoutubeTrackDetailsLoader implements YoutubeTrackDetailsLoad
               throw new RuntimeException("No player info block.");
             }
 
-            return new DefaultYoutubeTrackDetails(videoId, playerInfo);
+            return new DefaultYoutubeTrackDetails(videoId, playerInfo, playerInfoIsResponse);
           case REQUIRES_LOGIN:
-            return new DefaultYoutubeTrackDetails(videoId, getTrackInfoFromEmbedPage(httpInterface, videoId));
+            return new DefaultYoutubeTrackDetails(videoId, getTrackInfoFromEmbedPage(httpInterface, videoId), playerInfoIsResponse);
           case DOES_NOT_EXIST:
             return null;
         }
 
-        return new DefaultYoutubeTrackDetails(videoId, playerInfo);
+        return new DefaultYoutubeTrackDetails(videoId, playerInfo, playerInfoIsResponse);
       } catch (FriendlyException e) {
         throw e;
       } catch (Exception e) {
