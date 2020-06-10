@@ -38,10 +38,12 @@ public class DefaultYoutubeTrackDetails implements YoutubeTrackDetails {
 
   private final String videoId;
   private final JsonBrowser info;
+  private final boolean isPlayerResponseBlock;
 
-  public DefaultYoutubeTrackDetails(String videoId, JsonBrowser info) {
+  public DefaultYoutubeTrackDetails(String videoId, JsonBrowser info, boolean isPlayerResponseBlock) {
     this.videoId = videoId;
     this.info = info;
+    this.isPlayerResponseBlock = isPlayerResponseBlock;
   }
 
   @Override
@@ -80,8 +82,8 @@ public class DefaultYoutubeTrackDetails implements YoutubeTrackDetails {
 
     String playerResponse = args.get("player_response").text();
 
-    if (playerResponse != null) {
-      JsonBrowser playerData = JsonBrowser.parse(playerResponse);
+    if (isPlayerResponseBlock || playerResponse != null) {
+      JsonBrowser playerData = isPlayerResponseBlock ? info : JsonBrowser.parse(playerResponse);
       JsonBrowser streamingData = playerData.get("streamingData");
       boolean isLive = playerData.get("videoDetails").get("isLive").asBoolean(false);
 
@@ -307,7 +309,7 @@ public class DefaultYoutubeTrackDetails implements YoutubeTrackDetails {
       return buildTrackInfo(videoId, args.get("title").text(), args.get("author").text(), isStream, duration, null);
     }
 
-    JsonBrowser playerResponse = JsonBrowser.parse(args.get("player_response").text());
+    JsonBrowser playerResponse = isPlayerResponseBlock ? info : JsonBrowser.parse(args.get("player_response").text());
     JsonBrowser playabilityStatus = playerResponse.get("playabilityStatus");
 
     if ("ERROR".equals(playabilityStatus.get("status").text())) {
@@ -316,7 +318,12 @@ public class DefaultYoutubeTrackDetails implements YoutubeTrackDetails {
 
     JsonBrowser videoDetails = playerResponse.get("videoDetails");
 
-    boolean isStream = videoDetails.get("isLiveContent").asBoolean(false);
+    long realDuration = videoDetails.get("lengthSeconds").asLong(0L);
+    boolean isStream = videoDetails.get("isLiveContent").asBoolean(false) && realDuration == 0L;
+    // We do this because past broadcasts (livestreams that were converted to VODs) return true for isLiveContent,
+    // but have a length of 0. There's also an "isLive" property that we could check (it only exists for CURRENT livestreams,
+    // not past broadcasts), however given YouTube's love for changing things, I prefer not to rely on this property.
+
     long duration = extractDurationSeconds(isStream, videoDetails, "lengthSeconds");
 
     List<JsonBrowser> thumbnails = videoDetails.get("thumbnail").get("thumbnails").values();
