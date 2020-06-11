@@ -68,6 +68,10 @@ public class DefaultYoutubeTrackDetailsLoader implements YoutubeTrackDetailsLoad
               throw new RuntimeException("No player info block.");
             }
 
+            if(playerInfo.get("assets").get("js").isNull()) {
+              return new DefaultYoutubeTrackDetails(videoId, getTrackInfoFromEmbedPage(httpInterface, videoId), playerInfoIsResponse);
+            }
+
             return new DefaultYoutubeTrackDetails(videoId, playerInfo, playerInfoIsResponse);
           case REQUIRES_LOGIN:
             return new DefaultYoutubeTrackDetails(videoId, getTrackInfoFromEmbedPage(httpInterface, videoId), playerInfoIsResponse);
