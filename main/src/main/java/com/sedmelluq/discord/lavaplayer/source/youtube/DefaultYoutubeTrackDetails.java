@@ -324,7 +324,7 @@ public class DefaultYoutubeTrackDetails implements YoutubeTrackDetails {
 
     long duration = extractDurationSeconds(isStream, videoDetails, "lengthSeconds");
 
-    return buildTrackInfo(videoId, videoDetails.get("title").text(), videoDetails.get("author").text(), isStream, duration, PBJUtils.getBestThumbnail(videoDetails));
+    return buildTrackInfo(videoId, videoDetails.get("title").text(), videoDetails.get("author").text(), isStream, duration, PBJUtils.getBestThumbnail(videoDetails, videoId));
   }
 
   private long extractDurationSeconds(boolean isStream, JsonBrowser object, String field) {
@@ -338,7 +338,7 @@ public class DefaultYoutubeTrackDetails implements YoutubeTrackDetails {
   private AudioTrackInfo buildTrackInfo(String videoId, String title, String uploader, boolean isStream, long duration, String thumbnail) {
     return new AudioTrackInfo(title, uploader, duration, videoId, isStream,
         "https://www.youtube.com/watch?v=" + videoId,
-        Collections.singletonMap("artworkUrl", thumbnail != null ? thumbnail : String.format("https://i.ytimg.com/vi/%s/maxresdefault.jpg", videoId)));
+        Collections.singletonMap("artworkUrl", thumbnail));
   }
 
   private static Map<String, String> decodeUrlEncodedItems(String input, boolean escapedSeparator) {

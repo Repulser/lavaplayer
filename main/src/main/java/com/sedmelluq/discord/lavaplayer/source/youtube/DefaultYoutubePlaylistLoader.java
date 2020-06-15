@@ -157,11 +157,11 @@ public class DefaultYoutubePlaylistLoader implements YoutubePlaylistLoader {
           isStream = true;
         }
 
-        final String thumbnail = PBJUtils.getBestThumbnail(item);
+        final String thumbnail = PBJUtils.getBestThumbnail(item, videoId);
 
         AudioTrackInfo info = new AudioTrackInfo(title, author, duration, videoId, isStream,
             "https://www.youtube.com/watch?v=" + videoId,
-            Collections.singletonMap("artworkUrl", thumbnail != null ? thumbnail : String.format("https://i.ytimg.com/vi/%s/maxresdefault.jpg", videoId)));
+            Collections.singletonMap("artworkUrl", thumbnail));
 
         tracks.add(trackFactory.apply(info));
       }

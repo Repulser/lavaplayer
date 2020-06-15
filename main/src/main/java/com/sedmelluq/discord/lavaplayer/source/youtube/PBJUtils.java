@@ -23,11 +23,11 @@ public class PBJUtils {
         }
     }
 
-    public static String getBestThumbnail(JsonBrowser videoDetails) {
+    public static String getBestThumbnail(JsonBrowser videoDetails, String videoId) {
         List<JsonBrowser> thumbnails = videoDetails.get("thumbnail").get("thumbnails").values();
         if (!thumbnails.isEmpty())
             return thumbnails.get(thumbnails.size() - 1).get("url").text();
-        return null;
+        return String.format("https://i.ytimg.com/vi/%s/maxresdefault.jpg", videoId);
     }
 
 }
