@@ -1,6 +1,9 @@
 package com.sedmelluq.discord.lavaplayer.source.youtube;
 
+import com.sedmelluq.discord.lavaplayer.tools.JsonBrowser;
 import com.sedmelluq.discord.lavaplayer.tools.Units;
+
+import java.util.List;
 
 public class PBJUtils {
     protected static long parseDuration(String duration) {
@@ -19,4 +22,12 @@ public class PBJUtils {
             return Units.DURATION_MS_UNKNOWN;
         }
     }
+
+    public static String getBestThumbnail(JsonBrowser videoDetails) {
+        List<JsonBrowser> thumbnails = videoDetails.get("thumbnail").get("thumbnails").values();
+        if (!thumbnails.isEmpty())
+            return thumbnails.get(thumbnails.size() - 1).get("url").text();
+        return null;
+    }
+
 }

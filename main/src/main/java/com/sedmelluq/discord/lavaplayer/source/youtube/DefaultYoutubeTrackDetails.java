@@ -324,10 +324,7 @@ public class DefaultYoutubeTrackDetails implements YoutubeTrackDetails {
 
     long duration = extractDurationSeconds(isStream, videoDetails, "lengthSeconds");
 
-    List<JsonBrowser> thumbnails = videoDetails.get("thumbnail").get("thumbnails").values();
-    final String thumbnail = thumbnails.get(thumbnails.size() - 1).get("url").text();
-
-    return buildTrackInfo(videoId, videoDetails.get("title").text(), videoDetails.get("author").text(), isStream, duration, thumbnail);
+    return buildTrackInfo(videoId, videoDetails.get("title").text(), videoDetails.get("author").text(), isStream, duration, PBJUtils.getBestThumbnail(videoDetails));
   }
 
   private long extractDurationSeconds(boolean isStream, JsonBrowser object, String field) {

@@ -157,8 +157,7 @@ public class DefaultYoutubePlaylistLoader implements YoutubePlaylistLoader {
           isStream = true;
         }
 
-        List<JsonBrowser> thumbnails = item.get("thumbnail").get("thumbnails").values();
-        final String thumbnail = thumbnails.get(thumbnails.size() - 1).get("url").text();
+        final String thumbnail = PBJUtils.getBestThumbnail(item);
 
         AudioTrackInfo info = new AudioTrackInfo(title, author, duration, videoId, isStream,
             "https://www.youtube.com/watch?v=" + videoId,
