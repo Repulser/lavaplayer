@@ -32,6 +32,8 @@ dependencies {
 
   compile 'net.iharder:base64:2.3.9'
 
+  compile 'dnsjava:dnsjava:3.1.0'
+
   testCompile 'org.codehaus.groovy:groovy:2.5.5'
   testCompile 'org.spockframework:spock-core:1.2-groovy-2.5'
   testCompile 'ch.qos.logback:logback-classic:1.2.3'

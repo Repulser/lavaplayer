@@ -3,6 +3,7 @@ package com.sedmelluq.lava.extensions.youtuberotator.tools.ip;
 import com.sedmelluq.lava.extensions.youtuberotator.tools.Tuple;
 import org.apache.http.HttpException;
 import org.apache.http.HttpHost;
+import org.xbill.DNS.Address;
 
 import java.net.Inet4Address;
 import java.net.Inet6Address;
@@ -17,7 +18,7 @@ public final class IpAddressTools {
   public static Tuple<Inet4Address, Inet6Address> getRandomAddressesFromHost(final HttpHost host) throws HttpException {
     final List<InetAddress> ipList;
     try {
-      ipList = Arrays.asList(InetAddress.getAllByName(host.getHostName()));
+      ipList = Arrays.asList(Address.getAllByName(host.getHostName()));
     } catch (final UnknownHostException e) {
       throw new HttpException("Could not resolve " + host.getHostName(), e);
     }
