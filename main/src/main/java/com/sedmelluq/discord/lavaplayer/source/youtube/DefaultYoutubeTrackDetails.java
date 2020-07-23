@@ -87,8 +87,8 @@ public class DefaultYoutubeTrackDetails implements YoutubeTrackDetails {
 
 
   private List<YoutubeTrackFormat> loadTrackFormats(
-          HttpInterface httpInterface,
-          YoutubeSignatureResolver signatureResolver
+      HttpInterface httpInterface,
+      YoutubeSignatureResolver signatureResolver
   ) throws Exception {
     JsonBrowser args = data.get("args");
 
@@ -141,12 +141,12 @@ public class DefaultYoutubeTrackDetails implements YoutubeTrackDetails {
       if(url == null) continue;
 
       tracks.add(new YoutubeTrackFormat(
-              ContentType.parse(format.get("type")),
-              Long.parseLong(format.get("bitrate")),
-              Long.parseLong(format.get("clen")),
-              url,
-              format.get("s"),
-              format.getOrDefault("sp", DEFAULT_SIGNATURE_KEY)
+          ContentType.parse(format.get("type")),
+          Long.parseLong(format.get("bitrate")),
+          Long.parseLong(format.get("clen")),
+          url,
+          format.get("s"),
+          format.getOrDefault("sp", DEFAULT_SIGNATURE_KEY)
       ));
     }
 
@@ -174,12 +174,12 @@ public class DefaultYoutubeTrackDetails implements YoutubeTrackDetails {
         }
 
         tracks.add(new YoutubeTrackFormat(
-                ContentType.parse(format.get("type")),
-                qualityToBitrateValue(format.get("quality")),
-                Long.parseLong(contentLength),
-                url,
-                format.get("s"),
-                format.getOrDefault("sp", DEFAULT_SIGNATURE_KEY)
+            ContentType.parse(format.get("type")),
+            qualityToBitrateValue(format.get("quality")),
+            Long.parseLong(contentLength),
+            url,
+            format.get("s"),
+            format.getOrDefault("sp", DEFAULT_SIGNATURE_KEY)
         ));
       } catch (RuntimeException e) {
         anyFailures = true;
@@ -208,8 +208,8 @@ public class DefaultYoutubeTrackDetails implements YoutubeTrackDetails {
         }
 
         Map<String, String> cipherInfo = cipher != null
-                ? decodeUrlEncodedItems(cipher, true)
-                : Collections.emptyMap();
+            ? decodeUrlEncodedItems(cipher, true)
+            : Collections.emptyMap();
 
         try {
           long contentLength = formatJson.get("contentLength").asLong(CONTENT_LENGTH_UNKNOWN);
@@ -224,12 +224,12 @@ public class DefaultYoutubeTrackDetails implements YoutubeTrackDetails {
           if(url == null) continue;
 
           tracks.add(new YoutubeTrackFormat(
-                  ContentType.parse(formatJson.get("mimeType").text()),
-                  formatJson.get("bitrate").asLong(Units.BITRATE_UNKNOWN),
-                  contentLength,
-                  url,
-                  cipherInfo.get("s"),
-                  cipherInfo.getOrDefault("sp", DEFAULT_SIGNATURE_KEY)
+              ContentType.parse(formatJson.get("mimeType").text()),
+              formatJson.get("bitrate").asLong(Units.BITRATE_UNKNOWN),
+              contentLength,
+              url,
+              cipherInfo.get("s"),
+              cipherInfo.getOrDefault("sp", DEFAULT_SIGNATURE_KEY)
           ));
         } catch (RuntimeException e) {
           anyFailures = true;
@@ -260,9 +260,9 @@ public class DefaultYoutubeTrackDetails implements YoutubeTrackDetails {
   }
 
   private List<YoutubeTrackFormat> loadTrackFormatsFromDash(
-          String dashUrl,
-          HttpInterface httpInterface,
-          YoutubeSignatureResolver signatureResolver
+      String dashUrl,
+      HttpInterface httpInterface,
+      YoutubeSignatureResolver signatureResolver
   ) throws Exception {
     String resolvedDashUrl = signatureResolver.resolveDashUrl(httpInterface, getPlayerScript(), dashUrl);
 
@@ -273,7 +273,7 @@ public class DefaultYoutubeTrackDetails implements YoutubeTrackDetails {
       }
 
       Document document = Jsoup.parse(response.getEntity().getContent(), StandardCharsets.UTF_8.name(), "",
-              Parser.xmlParser());
+          Parser.xmlParser());
       return loadTrackFormatsFromDashDocument(document);
     }
   }
@@ -319,7 +319,7 @@ public class DefaultYoutubeTrackDetails implements YoutubeTrackDetails {
       boolean isStream =  isStream(videoDetails);
       long duration = extractDurationSeconds(isStream, videoDetails, "lengthSeconds");
 
-      return buildTrackInfo(videoId, videoDetails.get("title").text(), videoDetails.get("author").text(), isStream, duration, PBJUtils.getBestThumbnail(videoDetails, videoId)));
+      return buildTrackInfo(videoId, videoDetails.get("title").text(), videoDetails.get("author").text(), isStream, duration, PBJUtils.getBestThumbnail(videoDetails, videoId));
     }
 
     JsonBrowser args = data.get("args");
