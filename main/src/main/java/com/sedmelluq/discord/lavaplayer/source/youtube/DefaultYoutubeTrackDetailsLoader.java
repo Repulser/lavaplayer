@@ -72,7 +72,13 @@ public class DefaultYoutubeTrackDetailsLoader implements YoutubeTrackDetailsLoad
         switch (checkStatusBlock(statusBlock)) {
           case INFO_PRESENT:
             if (playerInfo.isNull()) {
-              throw new RuntimeException("No player info block.");
+              playerInfo = getTrackInfoFromEmbedPage(httpInterface, videoId);
+              log.warn("No player info block, falling back to embed page. json:\n" + json.text());
+            }
+
+            if (playerInfo.get("assets").get("js").isNull()) {
+              log.warn("Cipher script not found, falling back to embed page. json:\n" + json.text());
+              playerInfo = getTrackInfoFromEmbedPage(httpInterface, videoId);
             }
 
             return new DefaultYoutubeTrackDetails(videoId, playerInfo, requiresCipher);
