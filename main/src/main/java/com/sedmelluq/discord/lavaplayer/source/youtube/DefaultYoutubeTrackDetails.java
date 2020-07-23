@@ -215,11 +215,15 @@ public class DefaultYoutubeTrackDetails implements YoutubeTrackDetails {
             continue;
           }
 
+          String url = cipherInfo.getOrDefault("url", formatJson.get("url").text());
+
+          if(url == null) continue;
+
           tracks.add(new YoutubeTrackFormat(
                   ContentType.parse(formatJson.get("mimeType").text()),
                   formatJson.get("bitrate").asLong(Units.BITRATE_UNKNOWN),
                   contentLength,
-                  cipherInfo.getOrDefault("url", formatJson.get("url").text()),
+                  url,
                   cipherInfo.get("s"),
                   cipherInfo.getOrDefault("sp", DEFAULT_SIGNATURE_KEY)
           ));
