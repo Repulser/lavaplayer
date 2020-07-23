@@ -47,38 +47,42 @@ public class DefaultYoutubeTrackDetailsLoader implements YoutubeTrackDetailsLoad
       try {
         JsonBrowser json = JsonBrowser.parse(responseText);
         JsonBrowser playerInfo = JsonBrowser.NULL_BROWSER;
+        JsonBrowser playerResponse = JsonBrowser.NULL_BROWSER;
         JsonBrowser statusBlock = JsonBrowser.NULL_BROWSER;
+        boolean requiresCipher = true;
 
         for (JsonBrowser child : json.values()) {
           if (child.isMap()) {
             if (!child.get("player").isNull()) {
               playerInfo = child.get("player");
-            } else if (!child.get("playerResponse").isNull()) {
-              statusBlock = child.get("playerResponse").get("playabilityStatus");
+            }
+            if (!child.get("playerResponse").isNull()) {
+              playerResponse = child.get("playerResponse");
+              statusBlock = playerResponse.get("playabilityStatus");
             }
           }
+        }
+
+        if (playerInfo.isNull()) {
+          requiresCipher = playerResponse.get("videoDetails").get("useCipher").asBoolean(true);
+          if (!requiresCipher)
+            playerInfo = playerResponse;
         }
 
         switch (checkStatusBlock(statusBlock)) {
           case INFO_PRESENT:
             if (playerInfo.isNull()) {
-              playerInfo = getTrackInfoFromEmbedPage(httpInterface, videoId);
-              log.warn("No player info block, falling back to embed page. json:\n" + json.text());
+              throw new RuntimeException("No player info block.");
             }
 
-            if (playerInfo.get("assets").get("js").isNull()) {
-              log.warn("Cipher script not found, falling back to embed page. json:\n" + json.text());
-              playerInfo = getTrackInfoFromEmbedPage(httpInterface, videoId);
-            }
-
-            return new DefaultYoutubeTrackDetails(videoId, playerInfo);
+            return new DefaultYoutubeTrackDetails(videoId, playerInfo, requiresCipher);
           case REQUIRES_LOGIN:
-            return new DefaultYoutubeTrackDetails(videoId, getTrackInfoFromEmbedPage(httpInterface, videoId));
+            return new DefaultYoutubeTrackDetails(videoId, getTrackInfoFromEmbedPage(httpInterface, videoId), true); // true?
           case DOES_NOT_EXIST:
             return null;
         }
 
-        return new DefaultYoutubeTrackDetails(videoId, playerInfo);
+        return new DefaultYoutubeTrackDetails(videoId, playerInfo, requiresCipher);
       } catch (FriendlyException e) {
         throw e;
       } catch (Exception e) {
