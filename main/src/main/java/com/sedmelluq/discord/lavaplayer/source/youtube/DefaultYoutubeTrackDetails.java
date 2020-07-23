@@ -308,10 +308,10 @@ public class DefaultYoutubeTrackDetails implements YoutubeTrackDetails {
     if(!requiresCipher) {
       final JsonBrowser videoDetails = data.get("videoDetails");
 
-      boolean isStream = videoDetails.get("isLiveContent").asBoolean(false);
+      boolean isStream =  isStream(videoDetails);
       long duration = extractDurationSeconds(isStream, videoDetails, "lengthSeconds");
 
-      return buildTrackInfo(videoId, videoDetails.get("title").text(), videoDetails.get("author").text(), isStream, duration);
+      return buildTrackInfo(videoId, videoDetails.get("title").text(), videoDetails.get("author").text(), isStream, duration, PBJUtils.getBestThumbnail(videoDetails, videoId)));
     }
 
     JsonBrowser args = data.get("args");
@@ -324,7 +324,7 @@ public class DefaultYoutubeTrackDetails implements YoutubeTrackDetails {
 
       boolean isStream = "1".equals(args.get("live_playback").text());
       long duration = extractDurationSeconds(isStream, args, "length_seconds");
-      return buildTrackInfo(videoId, args.get("title").text(), args.get("author").text(), isStream, duration);
+      return buildTrackInfo(videoId, args.get("title").text(), args.get("author").text(), isStream, duration, null);
     }
 
     JsonBrowser playerResponse = JsonBrowser.parse(args.get("player_response").text());
@@ -336,10 +336,18 @@ public class DefaultYoutubeTrackDetails implements YoutubeTrackDetails {
 
     JsonBrowser videoDetails = playerResponse.get("videoDetails");
 
-    boolean isStream = videoDetails.get("isLiveContent").asBoolean(false);
+    boolean isStream = isStream(videoDetails);
     long duration = extractDurationSeconds(isStream, videoDetails, "lengthSeconds");
 
-    return buildTrackInfo(videoId, videoDetails.get("title").text(), videoDetails.get("author").text(), isStream, duration);
+    return buildTrackInfo(videoId, videoDetails.get("title").text(), videoDetails.get("author").text(), isStream, duration, PBJUtils.getBestThumbnail(videoDetails, videoId));
+  }
+
+  private boolean isStream(JsonBrowser videoDetails) {
+      long realDuration = videoDetails.get("lengthSeconds").asLong(0L);
+      // We do this because past broadcasts (livestreams that were converted to VODs) return true for isLiveContent,
+      // but have a length of 0. There's also an "isLive" property that we could check (it only exists for CURRENT livestreams,
+      // not past broadcasts), however given YouTube's love for changing things, I prefer not to rely on this property.
+      return videoDetails.get("isLiveContent").asBoolean(false) && realDuration == 0L;
   }
 
   private long extractDurationSeconds(boolean isStream, JsonBrowser object, String field) {
@@ -350,9 +358,9 @@ public class DefaultYoutubeTrackDetails implements YoutubeTrackDetails {
     return Units.secondsToMillis(object.get(field).asLong(DURATION_SEC_UNKNOWN));
   }
 
-  private AudioTrackInfo buildTrackInfo(String videoId, String title, String uploader, boolean isStream, long duration) {
+  private AudioTrackInfo buildTrackInfo(String videoId, String title, String uploader, boolean isStream, long duration, String thumbnail) {
     return new AudioTrackInfo(title, uploader, duration, videoId, isStream,
-            "https://www.youtube.com/watch?v=" + videoId);
+            "https://www.youtube.com/watch?v=" + videoId, Collections.singletonMap("artworkUrl", thumbnail));
   }
 
   private static Map<String, String> decodeUrlEncodedItems(String input, boolean escapedSeparator) {
