@@ -171,10 +171,11 @@ public class DefaultYoutubeTrackDetailsLoader implements YoutubeTrackDetailsLoad
   }
 
   protected JsonBrowser loadTrackBaseInfoFromEmbedPage(HttpInterface httpInterface, String videoId) throws IOException {
+    String html;
     try (CloseableHttpResponse response = httpInterface.execute(new HttpGet("https://www.youtube.com/embed/" + videoId))) {
       HttpClientTools.assertSuccessWithContent(response, "embed video page response");
 
-      String html = EntityUtils.toString(response.getEntity(), UTF_8);
+      html = EntityUtils.toString(response.getEntity(), UTF_8);
       String configJson = DataFormatTools.extractBetween(html, "'PLAYER_CONFIG': ", "});writeEmbed();");
 
       if (configJson != null) {
@@ -183,7 +184,7 @@ public class DefaultYoutubeTrackDetailsLoader implements YoutubeTrackDetailsLoad
     }
 
     throw new FriendlyException("Track information is unavailable.", SUSPICIOUS,
-            new IllegalStateException("Expected player config is not present in embed page."));
+            new IllegalStateException("Expected player config is not present in embed page. HTML:\n" + html));
   }
 
   protected Map<String, String> loadTrackArgsFromVideoInfoPage(HttpInterface httpInterface, String videoId, String sts) throws IOException {
