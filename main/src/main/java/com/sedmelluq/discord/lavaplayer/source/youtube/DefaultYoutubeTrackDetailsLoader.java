@@ -178,6 +178,10 @@ public class DefaultYoutubeTrackDetailsLoader implements YoutubeTrackDetailsLoad
       html = EntityUtils.toString(response.getEntity(), UTF_8);
       String configJson = DataFormatTools.extractBetween(html, "'PLAYER_CONFIG': ", "});writeEmbed();");
 
+      if(configJson == null) {
+        configJson = DataFormatTools.extractBetween(html, "'PLAYER_CONFIG': ", "});yt.setConfig({");
+      }
+
       if (configJson != null) {
         return JsonBrowser.parse(configJson);
       }
