@@ -76,7 +76,7 @@ public class DefaultYoutubeTrackDetailsLoader implements YoutubeTrackDetailsLoad
               log.warn("No player info block, falling back to embed page. json:\n" + json.text());
             }
 
-            if (playerInfo.get("assets").get("js").isNull()) {
+            if (requiresCipher && playerInfo.get("assets").get("js").isNull()) {
               log.warn("Cipher script not found, falling back to embed page. json:\n" + json.text());
               playerInfo = getTrackInfoFromEmbedPage(httpInterface, videoId);
             }
