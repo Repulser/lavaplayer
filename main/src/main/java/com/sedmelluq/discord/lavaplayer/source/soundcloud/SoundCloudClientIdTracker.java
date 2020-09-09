@@ -18,8 +18,7 @@ public class SoundCloudClientIdTracker {
   private static final Logger log = LoggerFactory.getLogger(SoundCloudClientIdTracker.class);
 
   private static final String ID_FETCH_CONTEXT_ATTRIBUTE = "sc-raw";
-  private static final long CLIENT_ID_REFRESH_INTERVAL = TimeUnit.HOURS.toMillis(1);
-  private static final long CLIENT_ID_TIMEOUT_INTERVAL = TimeUnit.MINUTES.toMillis(10);
+  private static final long CLIENT_ID_GRACE_INTERVAL = TimeUnit.MINUTES.toMillis(10);
   private static final String PAGE_APP_SCRIPT_REGEX = "https://[A-Za-z0-9-.]+/assets/[a-f0-9-]+\\.js";
   private static final String APP_SCRIPT_CLIENT_ID_REGEX = ",client_id:\"([a-zA-Z0-9-_]+)\"";
 
@@ -36,12 +35,12 @@ public class SoundCloudClientIdTracker {
   }
 
   /**
-   * Updates the clientID if more than {@link #CLIENT_ID_REFRESH_INTERVAL} time has passed since last updated.
+   * Updates the clientID if more than {@link #CLIENT_ID_GRACE_INTERVAL} time has passed since last updated.
    */
   public void updateClientId() {
     synchronized (clientIdLock) {
       long now = System.currentTimeMillis();
-      if (now - lastClientIdUpdate < CLIENT_ID_TIMEOUT_INTERVAL) {
+      if (now - lastClientIdUpdate < CLIENT_ID_GRACE_INTERVAL) {
         log.warn("Client ID was recently updated, not updating again right away.");
         return;
       }
