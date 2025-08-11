@@ -161,7 +161,7 @@ public class OpusPacketRouter {
   }
 
   private void passThrough(ByteBuffer buffer) throws InterruptedException {
-    if (requestedTimecode < currentTimecode) {
+    if (requestedTimecode <= currentTimecode) {
       offeredFrame.setTimecode(currentTimecode);
       offeredFrame.setBuffer(buffer);
 
