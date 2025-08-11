@@ -88,6 +88,7 @@ public class OpusPacketRouter {
    * @throws InterruptedException When interrupted externally (or for seek/stop).
    */
   public void process(ByteBuffer buffer) throws InterruptedException {
+    long frameStartTimecode = currentTimecode;
     int frameSize = processFrameSize(buffer);
 
     if (frameSize != 0) {
@@ -96,7 +97,7 @@ public class OpusPacketRouter {
       if (opusDecoder != null) {
         passDownstream(buffer, frameSize);
       } else {
-        passThrough(buffer);
+        passThrough(buffer, frameStartTimecode);
       }
     }
   }
@@ -160,9 +161,9 @@ public class OpusPacketRouter {
     downstream.process(frameBuffer);
   }
 
-  private void passThrough(ByteBuffer buffer) throws InterruptedException {
-    if (requestedTimecode <= currentTimecode) {
-      offeredFrame.setTimecode(currentTimecode);
+  private void passThrough(ByteBuffer buffer, long frameTimecode) throws InterruptedException {
+    if (requestedTimecode <= frameTimecode) {
+      offeredFrame.setTimecode(frameTimecode);
       offeredFrame.setBuffer(buffer);
 
       context.frameBuffer.consume(offeredFrame);
