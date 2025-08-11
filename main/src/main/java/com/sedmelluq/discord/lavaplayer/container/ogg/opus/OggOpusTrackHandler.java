@@ -36,8 +36,10 @@ public class OggOpusTrackHandler implements OggTrackHandler {
 
   @Override
   public void initialise(AudioProcessingContext context, long timecode, long desiredTimecode) {
-    opusPacketRouter = new OpusPacketRouter(context, sampleRate, channelCount);
-    opusPacketRouter.seekPerformed(desiredTimecode, timecode);
+    if (opusPacketRouter == null) {
+      opusPacketRouter = new OpusPacketRouter(context, sampleRate, channelCount);
+      opusPacketRouter.seekPerformed(desiredTimecode, timecode);
+    }
   }
 
   @Override
