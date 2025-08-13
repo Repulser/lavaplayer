@@ -45,31 +45,41 @@ public class AudioFrameVolumeChanger implements AudioFrameRebuilder {
       return frame;
     }
 
-    decoder.decode(frame.getData(), sampleBuffer);
-
-    int targetVolume = newVolume;
-
-    if (++frameIndex < 50) {
-      targetVolume = (int) ((newVolume - frame.getVolume()) * (frameIndex / 50.0) + frame.getVolume());
-    }
-
-    // Volume 0 is stored in the frame with volume 100 buffer
-    if (targetVolume != 0) {
-      volumeProcessor.applyVolume(frame.getVolume(), targetVolume, sampleBuffer);
-    }
-
-    byte[] bytes = encoder.encode(sampleBuffer);
-
-    // One frame per 20ms is consumed. To not spike the CPU usage, reencode only once per 5ms. By the time the buffer is
-    // fully rebuilt, it is probably near to 3/4 its maximum size.
     try {
-      Thread.sleep(5);
-    } catch (InterruptedException e) {
-      // Keep it interrupted, it will trip on the next interruptible operation
-      Thread.currentThread().interrupt();
-    }
+      decoder.decode(frame.getData(), sampleBuffer);
 
-    return new ImmutableAudioFrame(frame.getTimecode(), bytes, targetVolume, format, frame.getFlags());
+      int targetVolume = newVolume;
+
+      if (++frameIndex < 50) {
+        targetVolume = (int) ((newVolume - frame.getVolume()) * (frameIndex / 50.0) + frame.getVolume());
+      }
+
+      // Volume 0 is stored in the frame with volume 100 buffer
+      if (targetVolume != 0) {
+        volumeProcessor.applyVolume(frame.getVolume(), targetVolume, sampleBuffer);
+      }
+
+      byte[] bytes = encoder.encode(sampleBuffer);
+
+      // One frame per 20ms is consumed. To not spike the CPU usage, reencode only once per 5ms. By the time the buffer is
+      // fully rebuilt, it is probably near to 3/4 its maximum size.
+      try {
+        Thread.sleep(5);
+      } catch (InterruptedException e) {
+        // Keep it interrupted, it will trip on the next interruptible operation
+        Thread.currentThread().interrupt();
+        // Rethrow to ensure proper cleanup in apply() method
+        throw new RuntimeException("Volume change interrupted", e);
+      }
+
+      return new ImmutableAudioFrame(frame.getTimecode(), bytes, targetVolume, format, frame.getFlags());
+    } catch (RuntimeException e) {
+      // Propagate runtime exceptions to ensure cleanup happens
+      throw e;
+    } catch (Exception e) {
+      // Wrap checked exceptions to ensure cleanup happens
+      throw new RuntimeException("Failed to rebuild audio frame", e);
+    }
   }
 
   private void setupLibraries() {
@@ -95,11 +105,28 @@ public class AudioFrameVolumeChanger implements AudioFrameRebuilder {
     AudioFrameVolumeChanger volumeChanger = new AudioFrameVolumeChanger(context.configuration, context.outputFormat,
         context.playerOptions.volumeLevel.get());
 
+    boolean librariesSetup = false;
     try {
       volumeChanger.setupLibraries();
+      librariesSetup = true;
       context.frameBuffer.rebuild(volumeChanger);
+    } catch (Exception e) {
+      // Log the exception but ensure cleanup happens
+      if (e instanceof InterruptedException || e.getCause() instanceof InterruptedException) {
+        Thread.currentThread().interrupt();
+      }
+      throw new RuntimeException("Failed to apply volume change", e);
     } finally {
-      volumeChanger.clearLibraries();
+      // Always attempt cleanup if libraries were setup
+      if (librariesSetup) {
+        try {
+          volumeChanger.clearLibraries();
+        } catch (Exception cleanupEx) {
+          // Log cleanup failure but don't throw to avoid masking original exception
+          // The finalizer will eventually clean up the native resources
+          cleanupEx.printStackTrace();
+        }
+      }
     }
   }
 }
