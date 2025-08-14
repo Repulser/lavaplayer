@@ -18,6 +18,7 @@ public class OggOpusTrackHandler implements OggTrackHandler {
   private final int channelCount;
   private final int sampleRate;
   private OpusPacketRouter opusPacketRouter;
+  private Long pendingSeekTimecode;
 
   /**
    * @param packetInputStream OGG packet input stream
@@ -38,7 +39,20 @@ public class OggOpusTrackHandler implements OggTrackHandler {
   public void initialise(AudioProcessingContext context, long timecode, long desiredTimecode) {
     if (opusPacketRouter == null) {
       opusPacketRouter = new OpusPacketRouter(context, sampleRate, channelCount);
-      opusPacketRouter.seekPerformed(desiredTimecode, timecode);
+      
+      // If there was a pending seek before initialization, use that position
+      if (pendingSeekTimecode != null) {
+        try {
+          long actualPosition = packetInputStream.seek(pendingSeekTimecode);
+          opusPacketRouter.seekPerformed(pendingSeekTimecode, actualPosition);
+        } catch (IOException e) {
+          throw new RuntimeException(e);
+        } finally {
+          pendingSeekTimecode = null;
+        }
+      } else {
+        opusPacketRouter.seekPerformed(desiredTimecode, timecode);
+      }
     }
   }
 
@@ -65,7 +79,9 @@ public class OggOpusTrackHandler implements OggTrackHandler {
       if (opusPacketRouter != null) {
         opusPacketRouter.seekPerformed(timecode, packetInputStream.seek(timecode));
       } else {
-        // Just seek the stream if router isn't initialized yet
+        // Store the pending seek to apply when router is initialized
+        pendingSeekTimecode = timecode;
+        // Still seek the stream to position it correctly
         packetInputStream.seek(timecode);
       }
     } catch (IOException e) {
