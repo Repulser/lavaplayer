@@ -17,7 +17,8 @@ public class OggOpusTrackHandler implements OggTrackHandler {
   private final DirectBufferStreamBroker broker;
   private final int channelCount;
   private final int sampleRate;
-  private OpusPacketRouter opusPacketRouter;
+  private final Object stateLock = new Object();
+  private volatile OpusPacketRouter opusPacketRouter;
   private Long pendingSeekTimecode;
 
   /**
@@ -37,21 +38,30 @@ public class OggOpusTrackHandler implements OggTrackHandler {
 
   @Override
   public void initialise(AudioProcessingContext context, long timecode, long desiredTimecode) {
-    if (opusPacketRouter == null) {
-      opusPacketRouter = new OpusPacketRouter(context, sampleRate, channelCount);
+    synchronized (stateLock) {
+      if (opusPacketRouter != null) {
+        return;
+      }
       
-      // If there was a pending seek before initialization, use that position
-      if (pendingSeekTimecode != null) {
-        try {
+      OpusPacketRouter newRouter = new OpusPacketRouter(context, sampleRate, channelCount);
+      
+      try {
+        // If there was a pending seek before initialization, use that position
+        if (pendingSeekTimecode != null) {
           long actualPosition = packetInputStream.seek(pendingSeekTimecode);
-          opusPacketRouter.seekPerformed(pendingSeekTimecode, actualPosition);
-        } catch (IOException e) {
-          throw new RuntimeException(e);
-        } finally {
+          newRouter.seekPerformed(pendingSeekTimecode, actualPosition);
+          // Only clear pending seek after successful application
           pendingSeekTimecode = null;
+        } else {
+          newRouter.seekPerformed(desiredTimecode, timecode);
         }
-      } else {
-        opusPacketRouter.seekPerformed(desiredTimecode, timecode);
+        
+        // Commit the fully initialized router
+        opusPacketRouter = newRouter;
+      } catch (Exception e) {
+        // Clean up the router on failure to prevent leaks
+        newRouter.close();
+        throw new RuntimeException("Failed to initialize opus router", e);
       }
     }
   }
@@ -75,15 +85,21 @@ public class OggOpusTrackHandler implements OggTrackHandler {
 
   @Override
   public void seekToTimecode(long timecode) {
-    try {
-      if (opusPacketRouter != null) {
-        opusPacketRouter.seekPerformed(timecode, packetInputStream.seek(timecode));
-      } else {
-        // Store the pending seek to apply when router is initialized
+    OpusPacketRouter router;
+    synchronized (stateLock) {
+      router = this.opusPacketRouter;
+      if (router == null) {
+        // Not initialized yet - just store the pending seek
+        // The actual seek will be performed during initialization
         pendingSeekTimecode = timecode;
-        // Still seek the stream to position it correctly
-        packetInputStream.seek(timecode);
+        return;
       }
+    }
+    
+    // Perform the seek outside the lock to avoid blocking initialization
+    try {
+      long actualPosition = packetInputStream.seek(timecode);
+      router.seekPerformed(timecode, actualPosition);
     } catch (IOException e) {
       throw new RuntimeException(e);
     }
@@ -91,8 +107,11 @@ public class OggOpusTrackHandler implements OggTrackHandler {
 
   @Override
   public void close() {
-    if (opusPacketRouter != null) {
-      opusPacketRouter.close();
+    synchronized (stateLock) {
+      if (opusPacketRouter != null) {
+        opusPacketRouter.close();
+        opusPacketRouter = null;
+      }
     }
   }
 }
