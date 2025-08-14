@@ -62,7 +62,12 @@ public class OggOpusTrackHandler implements OggTrackHandler {
   @Override
   public void seekToTimecode(long timecode) {
     try {
-      opusPacketRouter.seekPerformed(timecode, packetInputStream.seek(timecode));
+      if (opusPacketRouter != null) {
+        opusPacketRouter.seekPerformed(timecode, packetInputStream.seek(timecode));
+      } else {
+        // Just seek the stream if router isn't initialized yet
+        packetInputStream.seek(timecode);
+      }
     } catch (IOException e) {
       throw new RuntimeException(e);
     }

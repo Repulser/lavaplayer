@@ -195,15 +195,26 @@ public class OpusPacketRouter {
   private void initialiseDecoder() {
     offeredFrame.setFlags();
 
-    opusDecoder = new OpusDecoder(inputFrequency, inputChannels);
-
+    OpusDecoder tempDecoder = null;
+    AudioPipeline tempDownstream = null;
+    
     try {
-      downstream = AudioPipelineFactory.create(context, new PcmFormat(inputChannels, inputFrequency));
-      downstream.seekPerformed(Math.max(currentTimecode, requestedTimecode), currentTimecode);
+      tempDecoder = new OpusDecoder(inputFrequency, inputChannels);
+      tempDownstream = AudioPipelineFactory.create(context, new PcmFormat(inputChannels, inputFrequency));
+      tempDownstream.seekPerformed(Math.max(currentTimecode, requestedTimecode), currentTimecode);
+      
+      // Only assign to fields if everything succeeded
+      opusDecoder = tempDecoder;
+      downstream = tempDownstream;
+      tempDecoder = null;  // Prevent cleanup since assignment succeeded
+      tempDownstream = null;
     } finally {
-      // When an exception is thrown, do not leave the router in a limbo state with decoder but no downstream.
-      if (downstream == null) {
-        destroyDecoder();
+      // Clean up any resources that weren't successfully assigned
+      if (tempDecoder != null) {
+        tempDecoder.close();
+      }
+      if (tempDownstream != null) {
+        tempDownstream.close();
       }
     }
   }
