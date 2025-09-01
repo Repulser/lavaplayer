@@ -7,7 +7,7 @@ import com.sedmelluq.discord.lavaplayer.track.playback.LocalAudioTrackExecutor;
  * track is created, but is passed when processDelegate() is called.
  */
 public abstract class DelegatedAudioTrack extends BaseAudioTrack {
-  private InternalAudioTrack delegate;
+  private volatile InternalAudioTrack delegate;
 
   /**
    * @param trackInfo Track info
@@ -27,46 +27,31 @@ public abstract class DelegatedAudioTrack extends BaseAudioTrack {
 
   @Override
   public void setPosition(long position) {
-    if (delegate != null) {
-      delegate.setPosition(position);
+    InternalAudioTrack currentDelegate = delegate;
+    if (currentDelegate != null) {
+      currentDelegate.setPosition(position);
     } else {
-      synchronized (this) {
-        if (delegate != null) {
-          delegate.setPosition(position);
-        } else {
-          super.setPosition(position);
-        }
-      }
+      super.setPosition(position);
     }
   }
 
   @Override
   public long getDuration() {
-    if (delegate != null) {
-      return delegate.getDuration();
+    InternalAudioTrack currentDelegate = delegate;
+    if (currentDelegate != null) {
+      return currentDelegate.getDuration();
     } else {
-      synchronized (this) {
-        if (delegate != null) {
-          return delegate.getDuration();
-        } else {
-          return super.getDuration();
-        }
-      }
+      return super.getDuration();
     }
   }
 
   @Override
   public long getPosition() {
-    if (delegate != null) {
-      return delegate.getPosition();
+    InternalAudioTrack currentDelegate = delegate;
+    if (currentDelegate != null) {
+      return currentDelegate.getPosition();
     } else {
-      synchronized (this) {
-        if (delegate != null) {
-          return delegate.getPosition();
-        } else {
-          return super.getPosition();
-        }
-      }
+      return super.getPosition();
     }
   }
 }
