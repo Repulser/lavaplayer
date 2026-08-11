@@ -30,6 +30,7 @@ import java.util.concurrent.TimeUnit;
 
 public abstract class AbstractRoutePlanner implements HttpRoutePlanner {
   private static final String CHOSEN_IP_ATTRIBUTE = "yt-route-ip";
+  public static final String PINNED_IP_ATTRIBUTE = "yt-route-pinned-ip";
 
   private static final long FAILING_TIME = TimeUnit.DAYS.toMillis(7);
   private static final Logger log = LoggerFactory.getLogger(AbstractRoutePlanner.class);
@@ -61,6 +62,17 @@ public abstract class AbstractRoutePlanner implements HttpRoutePlanner {
 
   public final InetAddress getLastAddress(final HttpClientContext context) {
     return context.getAttribute(CHOSEN_IP_ATTRIBUTE, InetAddress.class);
+  }
+
+  /**
+   * Pin subsequent requests in an HTTP context to a previously selected local address.
+   * This is useful when an upstream response contains URLs signed to the request IP.
+   *
+   * @param context HTTP context to pin
+   * @param address local address selected by a previous request
+   */
+  public final void pinAddress(final HttpClientContext context, final InetAddress address) {
+    context.setAttribute(PINNED_IP_ATTRIBUTE, address);
   }
 
   public final void markAddressFailing(HttpClientContext context) {
@@ -116,7 +128,10 @@ public abstract class AbstractRoutePlanner implements HttpRoutePlanner {
       remotePort = host.getPort();
 
     final Tuple<Inet4Address, Inet6Address> remoteAddresses = IpAddressTools.getRandomAddressesFromHost(host);
-    final Tuple<InetAddress, InetAddress> addresses = determineAddressPair(remoteAddresses);
+    final InetAddress pinnedAddress = clientContext.getAttribute(PINNED_IP_ATTRIBUTE, InetAddress.class);
+    final Tuple<InetAddress, InetAddress> addresses = pinnedAddress == null
+        ? determineAddressPair(remoteAddresses)
+        : determinePinnedAddressPair(pinnedAddress, remoteAddresses);
 
     final HttpHost target = new HttpHost(addresses.r, host.getHostName(), remotePort, host.getSchemeName());
     final HttpHost proxy = config.getProxy();
@@ -128,6 +143,31 @@ public abstract class AbstractRoutePlanner implements HttpRoutePlanner {
     } else {
       return new HttpRoute(target, addresses.l, proxy, secure);
     }
+  }
+
+  private Tuple<InetAddress, InetAddress> determinePinnedAddressPair(
+      final InetAddress pinnedAddress,
+      final Tuple<Inet4Address, Inet6Address> remoteAddresses
+  ) throws HttpException {
+    if (pinnedAddress instanceof Inet4Address) {
+      if (remoteAddresses.l == null) {
+        throw new HttpException("Could not resolve an IPv4 address for a pinned IPv4 route");
+      }
+      return new Tuple<>(pinnedAddress, remoteAddresses.l);
+    }
+
+    if (pinnedAddress instanceof Inet6Address) {
+      if (remoteAddresses.r != null) {
+        return new Tuple<>(pinnedAddress, remoteAddresses.r);
+      }
+      if (remoteAddresses.l != null) {
+        log.debug("Pinned IPv6 route target has no AAAA record; falling back to unbound IPv4");
+        return new Tuple<>(null, remoteAddresses.l);
+      }
+      throw new HttpException("Could not resolve host for a pinned IPv6 route");
+    }
+
+    throw new HttpException("Unsupported pinned address type: " + pinnedAddress.getClass().getCanonicalName());
   }
 
   /**
