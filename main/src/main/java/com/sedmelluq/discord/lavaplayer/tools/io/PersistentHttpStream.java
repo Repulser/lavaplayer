@@ -4,11 +4,13 @@ import com.sedmelluq.discord.lavaplayer.tools.Units;
 import com.sedmelluq.discord.lavaplayer.track.info.AudioTrackInfoBuilder;
 import com.sedmelluq.discord.lavaplayer.track.info.AudioTrackInfoProvider;
 import org.apache.http.Header;
+import org.apache.http.HttpClientConnection;
 import org.apache.http.HttpHeaders;
 import org.apache.http.HttpResponse;
 import org.apache.http.HttpStatus;
 import org.apache.http.client.methods.CloseableHttpResponse;
 import org.apache.http.client.methods.HttpGet;
+import org.apache.http.protocol.HttpCoreContext;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -34,6 +36,7 @@ public class PersistentHttpStream extends SeekableInputStream implements AutoClo
   protected final HttpInterface httpInterface;
   protected final URI contentUrl;
   private int lastStatusCode;
+  private HttpGet currentRequest;
   private CloseableHttpResponse currentResponse;
   protected InputStream currentContent;
   protected long position;
@@ -93,6 +96,11 @@ public class PersistentHttpStream extends SeekableInputStream implements AutoClo
   private HttpGet getConnectRequest() {
     HttpGet request = new HttpGet(getConnectUrl());
 
+    // Media responses are long-lived and are frequently completed by the CDN before playback
+    // consumes the entity. Reusing those half-closed TLS connections leaves descriptors in
+    // CLOSE_WAIT, so explicitly make each stream connection non-persistent.
+    request.setHeader(HttpHeaders.CONNECTION, "close");
+
     if (position > 0 && useHeadersForRange()) {
       request.setHeader(HttpHeaders.RANGE, "bytes=" + position + "-");
     }
@@ -118,10 +126,21 @@ public class PersistentHttpStream extends SeekableInputStream implements AutoClo
   }
 
   private boolean attemptConnect(boolean skipStatusCheck, boolean retryOnServerError) throws IOException {
-    currentResponse = httpInterface.execute(getConnectRequest());
+    HttpGet request = getConnectRequest();
+    currentRequest = request;
+
+    try {
+      currentResponse = httpInterface.execute(request);
+    } catch (IOException | RuntimeException e) {
+      request.abort();
+      currentRequest = null;
+      throw e;
+    }
+
     lastStatusCode = currentResponse.getStatusLine().getStatusCode();
 
     if (!skipStatusCheck && !validateStatusCode(currentResponse, retryOnServerError)) {
+      close();
       return false;
     }
 
@@ -230,15 +249,38 @@ public class PersistentHttpStream extends SeekableInputStream implements AutoClo
 
   @Override
   public void close() throws IOException {
-    if (currentResponse != null) {
+    HttpGet request = currentRequest;
+    CloseableHttpResponse response = currentResponse;
+
+    currentRequest = null;
+    currentResponse = null;
+    currentContent = null;
+
+    // Closing a response may return its socket to the Apache pool. That is unsafe when the
+    // peer has already sent FIN: the leased descriptor can remain in CLOSE_WAIT indefinitely
+    // while the entity stream is no longer consumed. Aborting the request first force-closes
+    // the underlying connection instead of relying on pool eviction to discover the half-close.
+    if (request != null && !request.isAborted()) {
+      request.abort();
+    }
+
+    if (request != null || response != null) {
+      Object contextConnection = httpInterface.getContext().getAttribute(HttpCoreContext.HTTP_CONNECTION);
+      if (contextConnection instanceof HttpClientConnection) {
+        try {
+          ((HttpClientConnection) contextConnection).shutdown();
+        } catch (IOException | RuntimeException e) {
+          log.debug("Failed to shut down stream connection.", e);
+        }
+      }
+    }
+
+    if (response != null) {
       try {
-        currentResponse.close();
+        response.close();
       } catch (IOException e) {
         log.debug("Failed to close response.", e);
       }
-
-      currentResponse = null;
-      currentContent = null;
     }
   }
 
@@ -254,6 +296,7 @@ public class PersistentHttpStream extends SeekableInputStream implements AutoClo
       }
     }
 
+    currentRequest = null;
     currentResponse = null;
     currentContent = null;
   }
